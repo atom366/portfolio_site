@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chord Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inconsolata:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Theme tokens ── */
+[data-theme="dark"] {
+  --bg:        #0a0a0a;
+  --bg2:       #111111;
+  --surface:   #161616;
+  --surface2:  #1e1e1e;
+  --surface3:  #252525;
+  --border:    #2a2a2a;
+  --border2:   #333333;
+  --text:      #e8e6e0;
+  --text-2:    #a09890;
+  --text-3:    #555555;
+  --accent:    #c8a96e;
+  --mastered:  #72b06f;
+  --learning:  #5b9bd5;
+  --future:    #9b72cf;
+
+  --shadow:    rgba(0,0,0,0.7);
+  --nut:       #9a7d45;
+  --fret-line: #2c2820;
+  --str-color: #3a3228;
+  --dot-text:  #0a0a0a;
+  --marker:    #4a4438;
+}
+[data-theme="light"] {
+  --bg:        #f5f2ed;
+  --bg2:       #ede9e2;
+  --surface:   #ffffff;
+  --surface2:  #f0ece5;
+  --surface3:  #e8e3da;
+  --border:    #d8d0c4;
+  --border2:   #c8bfb0;
+  --text:      #1a1814;
+  --text-2:    #6b6054;
+  --text-3:    #b0a898;
+  --accent:    #a07840;
+  --mastered:  #3d8a3a;
+  --learning:  #a07840;
+  --future:    #3a6e90;
+  --shadow:    rgba(0,0,0,0.15);
+  --nut:       #7a5e28;
+  --fret-line: #c0b09a;
+  --str-color: #9a8870;
+  --dot-text:  #ffffff;
+  --marker:    #8a7868;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inconsolata', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background .25s, color .25s;
+}
+
+/* ── Progress strip ── */
+.progress-strip { height: 2px; width: 100%; background: var(--border); display: flex; }
+.progress-seg   { height: 100%; transition: width .6s cubic-bezier(.4,0,.2,1); }
+.progress-seg.mastered { background: var(--mastered); }
+.progress-seg.learning { background: var(--learning); }
+.progress-seg.future   { background: var(--future); }
+
+/* ── Header ── */
+header {
+  padding: 36px 44px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-end;
+  justify-content: space-between; gap: 20px; flex-wrap: wrap;
+}
+.logo-area h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-weight: 700;
+  letter-spacing: -.01em;
+  line-height: 1;
+  color: var(--text);
+}
+.logo-area p {
+  font-size: .68rem; font-weight: 400;
+  color: var(--text-2); letter-spacing: .2em;
+  text-transform: uppercase; margin-top: 6px;
+}
+.header-right { display: flex; align-items: flex-end; gap: 32px; flex-wrap: wrap; }
+.stats-bar { display: flex; gap: 24px; }
+.stat { text-align: right; }
+.stat-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.2rem; font-weight: 600; line-height: 1;
+}
+.stat-label {
+  font-size: .6rem; font-weight: 500;
+  letter-spacing: .18em; text-transform: uppercase;
+  color: var(--text-2); margin-top: 1px;
+}
+.stat.mastered .stat-num { color: var(--mastered); }
+.stat.learning .stat-num { color: var(--learning); }
+.stat.future   .stat-num { color: var(--future); }
+
+/* theme toggle */
+.theme-toggle-wrap {
+  display: flex; align-items: center; gap: 7px;
+}
+.theme-icon {
+  font-size: 1rem; line-height: 1;
+  user-select: none; pointer-events: none;
+}
+.theme-toggle {
+  width: 36px; height: 20px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  cursor: pointer;
+  position: relative;
+  transition: background .2s;
+  flex-shrink: 0;
+  align-self: center;
+}
+.theme-toggle::after {
+  content: '';
+  position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--text-2);
+  transition: transform .2s, background .2s;
+}
+[data-theme="light"] .theme-toggle::after {
+  transform: translateX(16px);
+  background: var(--accent);
+}
+.theme-label {
+  font-size: .58rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--text-3);
+  align-self: center;
+}
+
+/* light mode chord card border */
+[data-theme="light"] .chord-card {
+  border-color: rgba(0,0,0,.18);
+  box-shadow: 0 1px 4px rgba(0,0,0,.1);
+}
+
+/* ── Controls bar ── */
+.controls {
+  padding: 13px 44px;
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.filter-btn {
+  font-family: 'Inconsolata', monospace;
+  font-size: .7rem; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 5px 12px;
+  border: 1px solid var(--border2); border-radius: 2px;
+  background: transparent; color: var(--text-2);
+  cursor: pointer; transition: all .15s;
+}
+.filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.filter-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.filter-btn.active.mastered { background: var(--mastered); border-color: var(--mastered); }
+.filter-btn.active.learning { background: var(--learning); border-color: var(--learning); }
+.filter-btn.active.future   { background: var(--future);   border-color: var(--future);   }
+.add-btn {
+  font-family: 'Inconsolata', monospace;
+  font-size: .7rem; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 5px 12px;
+  border: 1px solid var(--accent); border-radius: 2px;
+  background: transparent; color: var(--accent);
+  cursor: pointer; transition: all .15s;
+}
+.add-btn:hover { background: var(--accent); color: var(--bg); }
+.search-wrap { margin-left: auto; position: relative; }
+.search-wrap input {
+  font-family: 'Inconsolata', monospace;
+  font-size: .75rem; font-weight: 400;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 2px; color: var(--text);
+  padding: 5px 11px 5px 28px; width: 190px;
+  outline: none; transition: border-color .18s;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap input::placeholder { color: var(--text-3); }
+.search-wrap::before {
+  content: '⌕'; position: absolute; left: 8px; top: 50%;
+  transform: translateY(-50%); color: var(--text-3);
+  font-size: 1rem; pointer-events: none;
+}
+
+/* ── Sections ── */
+main { padding: 32px 44px; }
+.section { margin-bottom: 48px; }
+.section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.section-pip { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.section.mastered .section-pip { background: var(--mastered); }
+.section.learning .section-pip { background: var(--learning); }
+.section.future   .section-pip { background: var(--future); }
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem; font-weight: 600;
+}
+.section-count {
+  font-size: .6rem; font-weight: 500;
+  letter-spacing: .16em; color: var(--text-2);
+  text-transform: uppercase; margin-left: auto;
+}
+
+/* ── Chord grid ── */
+.chord-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+  gap: 11px;
+}
+
+/* ── Card ── */
+.chord-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 28px 10px 10px; /* top padding for buttons */
+  cursor: pointer;
+  transition: transform .18s, border-color .18s, background .18s, box-shadow .18s;
+  text-align: center;
+  user-select: none;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.chord-card:hover {
+  border-color: var(--accent);
+  background: var(--surface2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--shadow);
+}
+.chord-card.mastered { border-color: rgba(114,176,111,.35); background: rgba(114,176,111,.05); }
+.chord-card.mastered:hover { border-color: var(--mastered); }
+.chord-card.learning { border-color: rgba(91,155,213,.32); background: rgba(91,155,213,.05); }
+.chord-card.learning:hover { border-color: var(--learning); }
+.chord-card.future   { border-color: rgba(155,114,207,.28); background: rgba(155,114,207,.04); }
+.chord-card.future:hover   { border-color: var(--future); }
+.chord-card.custom-chord { border-style: dashed; }
+
+/* dragging state */
+.chord-card.dragging {
+  opacity: .35;
+  transform: scale(.97);
+  cursor: grabbing;
+}
+.chord-card.drag-over {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.chord-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem; font-weight: 700; line-height: 1;
+  color: var(--text);
+}
+.chord-type {
+  font-size: .56rem; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--text-2); margin-bottom: 1px;
+}
+.chord-diagram { width: 100%; padding: 1px 2px; }
+.chord-diagram svg { width: 100%; height: auto; display: block; }
+.chord-status-dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--border2); margin-top: 3px;
+  transition: background .2s;
+}
+.chord-card.mastered .chord-status-dot { background: var(--mastered); }
+.chord-card.learning .chord-status-dot { background: var(--learning); }
+.chord-card.future   .chord-status-dot { background: var(--future); }
+
+/* ── Card corner buttons ── */
+/* Edit = top LEFT, Expand = top RIGHT */
+.btn-edit, .btn-expand {
+  position: absolute; top: 6px;
+  width: 20px; height: 20px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 12px; line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity .15s, border-color .15s, color .15s, background .15s;
+}
+.btn-edit   { left: 6px; }
+.btn-expand { right: 6px; }
+.chord-card:hover .btn-edit,
+.chord-card:hover .btn-expand { opacity: 1; }
+.btn-edit:hover, .btn-expand:hover {
+  border-color: var(--border2);
+  background: var(--surface3);
+  color: var(--accent);
+}
+
+/* ── Context menu ── */
+.ctx-menu {
+  position: fixed; z-index: 800;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 4px; padding: 5px 0; min-width: 170px;
+  box-shadow: 0 8px 28px var(--shadow);
+  display: none;
+}
+.ctx-menu.show { display: block; animation: popIn .1s ease; }
+.ctx-label {
+  font-size: .58rem; font-weight: 500;
+  letter-spacing: .18em; text-transform: uppercase;
+  color: var(--text-3); padding: 5px 13px 3px;
+}
+.ctx-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 13px; font-size: .72rem; font-weight: 400;
+  cursor: pointer; transition: background .12s; color: var(--text-2);
+}
+.ctx-item:hover { background: var(--surface3); color: var(--text); }
+.ctx-item .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.ctx-item.mastered .dot { background: var(--mastered); } .ctx-item.mastered:hover { color: var(--mastered); }
+.ctx-item.learning .dot { background: var(--learning); } .ctx-item.learning:hover { color: var(--learning); }
+.ctx-item.future   .dot { background: var(--future);   } .ctx-item.future:hover   { color: var(--future); }
+.ctx-item.unset    .dot { background: var(--text-3); }
+.ctx-sep { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+/* ── Overlays ── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.72);
+  z-index: 900;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+.overlay.hidden { display: none; }
+
+/* Expand panel */
+.expand-panel {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  width: 300px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 20px 60px var(--shadow);
+  position: relative;
+}
+.expand-chord-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem; font-weight: 700;
+  text-align: center; line-height: 1;
+}
+.expand-chord-type {
+  font-size: .6rem; font-weight: 500;
+  letter-spacing: .16em; text-transform: uppercase;
+  color: var(--text-2); text-align: center; margin-top: 4px; margin-bottom: 10px;
+}
+.expand-panel svg { width: 100%; height: auto; display: block; }
+.expand-close {
+  display: block; margin: 14px auto 0;
+  font-family: 'Inconsolata', monospace;
+  font-size: .62rem; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase;
+  padding: 6px 16px;
+  border: 1px solid var(--border2); border-radius: 2px;
+  background: transparent; color: var(--text-2);
+  cursor: pointer; transition: all .15s;
+}
+.expand-close:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Editor modal */
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  width: 100%; max-width: 580px; max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px var(--shadow);
+}
+.modal-hdr {
+  padding: 18px 22px 15px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem; font-weight: 700;
+}
+.modal-x {
+  width: 26px; height: 26px;
+  border: 1px solid var(--border); border-radius: 3px;
+  background: transparent; color: var(--text-2);
+  cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .14s;
+}
+.modal-x:hover { border-color: var(--accent); color: var(--accent); }
+.modal-body { padding: 18px 22px; }
+.modal-ftr {
+  padding: 13px 22px; border-top: 1px solid var(--border);
+  display: flex; gap: 9px; justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* Editor layout: preview left, controls right */
+.ed-layout {
+  display: flex; gap: 20px; align-items: flex-start;
+}
+.ed-preview-col {
+  flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.ed-preview-label {
+  font-size: .58rem; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--text-3);
+}
+.ed-preview-svg {
+  width: 180px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px;
+}
+.ed-preview-svg svg { width: 100%; height: auto; display: block; }
+.ed-controls-col { flex: 1; min-width: 0; }
+
+/* form bits */
+.ef { margin-bottom: 13px; }
+.ef label {
+  display: block; font-size: .6rem; font-weight: 500;
+  letter-spacing: .13em; text-transform: uppercase;
+  color: var(--text-2); margin-bottom: 5px;
+}
+.ef input, .ef select {
+  font-family: 'Inconsolata', monospace;
+  font-size: .76rem; font-weight: 400;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 3px; color: var(--text);
+  padding: 6px 9px; width: 100%; outline: none;
+  transition: border-color .18s;
+}
+.ef input:focus, .ef select:focus { border-color: var(--accent); }
+.ef select option { background: var(--surface2); }
+.ef-row { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+.ef-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+
+.strings-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.strings-table th {
+  font-size: .56rem; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-3); padding: 0 4px 6px; text-align: left;
+}
+.strings-table td { padding: 3px 3px; }
+.strings-table select {
+  font-family: 'Inconsolata', monospace;
+  font-size: .7rem; background: var(--surface2);
+  border: 1px solid var(--border2); border-radius: 2px;
+  color: var(--text); padding: 3px 5px; width: 100%;
+  outline: none; cursor: pointer;
+}
+.strings-table select:focus { border-color: var(--accent); }
+.str-label { font-size: .65rem; color: var(--text-2); padding-right: 4px; }
+
+.barre-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.barre-toggle label { font-size: .65rem; color: var(--text-2); cursor: pointer; }
+.barre-toggle input[type=checkbox] { accent-color: var(--accent); cursor: pointer; }
+
+/* generic buttons */
+.btn {
+  font-family: 'Inconsolata', monospace;
+  font-size: .68rem; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 7px 16px; border-radius: 3px;
+  cursor: pointer; transition: all .15s;
+  border: 1px solid var(--border2);
+  background: transparent; color: var(--text-2);
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.btn.primary:hover { opacity: .85; }
+.btn.danger { color: #d0634a; border-color: #d0634a; }
+.btn.danger:hover { background: #d0634a; color: #fff; }
+.hidden { display: none !important; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 22px; left: 50%;
+  transform: translateX(-50%) translateY(70px);
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 3px; padding: 8px 16px;
+  font-size: .68rem; font-weight: 400; letter-spacing: .05em;
+  color: var(--text-2); pointer-events: none;
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+  white-space: nowrap; z-index: 9999;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── Empty state ── */
+.empty { color: var(--text-3); font-size: .7rem; font-style: italic; padding: 8px 0; }
+
+/* ── Auth UI ── */
+.auth-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 20px;
+}
+.auth-screen.hidden { display: none; }
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 40px 48px;
+  text-align: center;
+  box-shadow: 0 20px 60px var(--shadow);
+  max-width: 380px; width: 100%;
+}
+.auth-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.2rem; font-weight: 700;
+  margin-bottom: 6px;
+}
+.auth-sub {
+  font-size: .68rem; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--text-2);
+  margin-bottom: 32px;
+}
+.btn-google {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 11px 20px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 4px; cursor: pointer;
+  font-family: 'Inconsolata', monospace;
+  font-size: .78rem; font-weight: 500; letter-spacing: .06em;
+  color: var(--text); transition: all .15s;
+}
+.btn-google:hover { border-color: var(--accent); color: var(--accent); background: var(--surface3); }
+.btn-google svg { flex-shrink: 0; }
+.auth-note { font-size: .6rem; color: var(--text-3); letter-spacing: .08em; margin-top: 16px; }
+
+/* user chip in header */
+.user-chip { display: flex; align-items: center; gap: 8px; align-self: center; }
+.user-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border2); }
+.user-name { font-size: .65rem; letter-spacing: .08em; color: var(--text-2); max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btn-signout {
+  font-family: 'Inconsolata', monospace;
+  font-size: .58rem; letter-spacing: .1em; text-transform: uppercase;
+  padding: 3px 8px; border: 1px solid var(--border2);
+  border-radius: 2px; background: transparent; color: var(--text-3);
+  cursor: pointer; transition: all .15s;
+}
+.btn-signout:hover { border-color: var(--accent); color: var(--accent); }
+
+/* sync indicator */
+.sync-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-3); display: inline-block; margin-right: 5px; transition: background .3s; }
+.sync-dot.syncing { background: var(--learning); animation: pulse 1s infinite; }
+.sync-dot.synced  { background: var(--mastered); }
+.sync-dot.error   { background: #e05555; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+footer {
+  padding: 16px 44px; border-top: 1px solid var(--border);
+  font-size: .58rem; font-weight: 400; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-3);
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.95) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+
+@media (max-width: 600px) {
+  header, .controls, main, footer { padding-left: 16px; padding-right: 16px; }
+  .chord-grid { grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 9px; }
+  .ed-layout { flex-direction: column; }
+  .ed-preview-col { width: 100%; }
+  .ed-preview-svg { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- Auth screen -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-title">Chord Journal</div>
+    <div class="auth-sub">Guitar learning tracker</div>
+    <button class="btn-google" id="btn-google-signin">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <div class="auth-note">Your chord data is private and synced across devices</div>
+  </div>
+</div>
+
+<div class="progress-strip">
+  <div class="progress-seg mastered" id="prog-mastered" style="width:0%"></div>
+  <div class="progress-seg learning" id="prog-learning" style="width:0%"></div>
+  <div class="progress-seg future"   id="prog-future"   style="width:0%"></div>
+</div>
+
+<header>
+  <div class="logo-area">
+    <h1>Chord Journal</h1>
+    <p>Guitar learning tracker</p>
+  </div>
+  <div class="header-right">
+    <div class="stats-bar">
+      <div class="stat mastered"><div class="stat-num" id="cnt-mastered">0</div><div class="stat-label">Mastered</div></div>
+      <div class="stat learning"><div class="stat-num" id="cnt-learning">0</div><div class="stat-label">Learning</div></div>
+      <div class="stat future">  <div class="stat-num" id="cnt-future">0</div>  <div class="stat-label">Up Next</div></div>
+    </div>
+    <span class="theme-label" id="theme-label">Dark</span>
+    <div class="theme-toggle-wrap">
+      <span class="theme-icon" id="theme-icon">🌙</span>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle theme"></button>
+    </div>
+    <div class="user-chip" id="user-chip" style="display:none">
+      <img class="user-avatar" id="user-avatar" src="" alt="">
+      <span class="user-name" id="user-name"></span>
+      <button class="btn-signout" id="btn-signout">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<div class="controls">
+  <button class="filter-btn active"   data-filter="all">All</button>
+  <button class="filter-btn mastered" data-filter="mastered">Mastered</button>
+  <button class="filter-btn learning" data-filter="learning">Learning</button>
+  <button class="filter-btn future"   data-filter="future">Up Next</button>
+  <button class="filter-btn"         data-filter="unset">Not started</button>
+  <button class="add-btn" id="btn-add">+ New Chord</button>
+  <div class="search-wrap"><input type="text" id="search" placeholder="Search chords…" autocomplete="off"></div>
+</div>
+
+<main>
+  <div class="section mastered" id="sec-mastered">
+    <div class="section-header"><div class="section-pip"></div><div class="section-title">Mastered</div><div class="section-count" id="lbl-mastered"></div></div>
+    <div class="chord-grid" id="grid-mastered"></div>
+  </div>
+  <div class="section learning" id="sec-learning">
+    <div class="section-header"><div class="section-pip"></div><div class="section-title">Currently Learning</div><div class="section-count" id="lbl-learning"></div></div>
+    <div class="chord-grid" id="grid-learning"></div>
+  </div>
+  <div class="section future" id="sec-future">
+    <div class="section-header"><div class="section-pip"></div><div class="section-title">Up Next</div><div class="section-count" id="lbl-future"></div></div>
+    <div class="chord-grid" id="grid-future"></div>
+  </div>
+  <div class="section" id="sec-unset">
+    <div class="section-header"><div class="section-pip" style="background:var(--text-3)"></div><div class="section-title" style="color:var(--text-2)">Not Started</div><div class="section-count" id="lbl-unset"></div></div>
+    <div class="chord-grid" id="grid-unset"></div>
+  </div>
+</main>
+
+<!-- Context menu -->
+<div class="ctx-menu" id="ctx-menu">
+  <div class="ctx-label">Move to</div>
+  <div class="ctx-item mastered" data-status="mastered"><span class="dot"></span>Mastered</div>
+  <div class="ctx-item learning" data-status="learning"><span class="dot"></span>Currently Learning</div>
+  <div class="ctx-item future"   data-status="future">  <span class="dot"></span>Up Next</div>
+  <hr class="ctx-sep">
+  <div class="ctx-item unset" data-status="unset"><span class="dot"></span>Not Started</div>
+</div>
+
+<!-- Expand overlay -->
+<div class="overlay hidden" id="expand-overlay">
+  <div class="expand-panel">
+    <div class="expand-chord-name" id="exp-name"></div>
+    <div class="expand-chord-type" id="exp-type"></div>
+    <div id="exp-diagram"></div>
+    <button class="expand-close" id="exp-close">Close</button>
+  </div>
+</div>
+
+<!-- Editor overlay -->
+<div class="overlay hidden" id="editor-overlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="ed-modal-title">Edit Chord</div>
+      <button class="modal-x" id="ed-close">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Meta fields (new chord only) -->
+      <div id="ed-meta" class="hidden">
+        <div class="ef-row" style="margin-bottom:14px;">
+          <div class="ef"><label>Chord Name</label><input type="text" id="ed-name" placeholder="e.g. F#7" maxlength="10"></div>
+          <div class="ef"><label>Type</label><input type="text" id="ed-type" placeholder="e.g. Dominant 7th" maxlength="30"></div>
+        </div>
+      </div>
+
+      <div class="ed-layout">
+
+        <!-- Live preview -->
+        <div class="ed-preview-col">
+          <div class="ed-preview-label">Live Preview</div>
+          <div class="ed-preview-svg" id="ed-preview"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="ed-controls-col">
+
+          <div class="ef-row" style="margin-bottom:13px;">
+            <div class="ef"><label>Start Fret</label>
+              <input type="number" id="ed-startFret" min="1" max="12" value="1">
+            </div>
+            <div class="ef"><label>Frets Shown</label>
+              <select id="ed-numFrets">
+                <option value="4" selected>4</option>
+                <option value="5">5</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- String table -->
+          <table class="strings-table">
+            <thead>
+              <tr>
+                <th>Str</th>
+                <th>State / Fret</th>
+                <th>Finger</th>
+              </tr>
+            </thead>
+            <tbody id="ed-string-rows"></tbody>
+          </table>
+
+          <!-- Barre -->
+          <div class="barre-toggle">
+            <input type="checkbox" id="ed-barre-on">
+            <label for="ed-barre-on">Barre bar</label>
+          </div>
+          <div id="ed-barre-fields" class="hidden">
+            <div class="ef-row3">
+              <div class="ef"><label>Fret</label>    <input type="number" id="ed-bf" min="1" max="15" value="1"></div>
+              <div class="ef"><label>From (str)</label><input type="number" id="ed-bfrom" min="1" max="6" value="6"></div>
+              <div class="ef"><label>To (str)</label>  <input type="number" id="ed-bto"   min="1" max="6" value="1"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn danger hidden" id="ed-delete">Delete</button>
+      <button class="btn" id="ed-cancel">Cancel</button>
+      <button class="btn primary" id="ed-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <span>Click to expand · Double-click to cycle · Right-click for menu · ✎ edit (top-left) · Drag to reorder</span>
+  <span><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Not signed in</span></span>
+</footer>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════
+//  SVG RENDERER
+//  - String 6 (low E) = LEFT, thickest
+//  - String 1 (high e) = RIGHT, thinnest
+//  - Fret lines taper slightly with each fret
+//  - Rectangular fret cells (taller than wide)
+// ═══════════════════════════════════════════════════
+function buildSVG(chord, statusClass, scale) {
+  scale = scale || 1;
+  const BW = 112, BH = 118;
+  const W = BW*scale, H = BH*scale;
+  const L = 21*scale, T = 20*scale;
+  const STRINGS = 6;
+  const FRETS = chord.numFrets || 4;
+  const SW = (BW - 21 - 9) * scale / (STRINGS-1);
+  const FH = (BH - 20 - 12) * scale / FRETS;
+
+  const startFret = chord.startFret || 1;
+  const open    = chord.open    || [];
+  const muted   = chord.muted   || [];
+  const fingers = chord.fingers || [];
+  const barre   = chord.barre   || null;
+
+  const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+  const nutCol    = theme==='dark' ? '#9a7d45' : '#7a5e28';
+  const fretCol   = theme==='dark' ? '#2c2820' : '#c0b09a';
+  const markerCol = theme==='dark' ? '#4a4438' : '#8a7868';
+  const dotText   = theme==='dark' ? '#0a0a0a' : '#ffffff';
+
+  const dotFill = statusClass==='mastered' ? 'var(--mastered)'
+                : statusClass==='learning' ? 'var(--learning)'
+                : statusClass==='future'   ? 'var(--future)'
+                : (theme==='dark' ? '#6a6058' : '#9a8878');
+
+  // Resolved colors (CSS vars don't work inside SVG strings injected as innerHTML)
+  const dotFillR = statusClass==='mastered' ? (theme==='dark'?'#72b06f':'#3d8a3a')
+                 : statusClass==='learning' ? (theme==='dark'?'#5b9bd5':'#a07840')
+                 : statusClass==='future'   ? (theme==='dark'?'#9b72cf':'#3a6e90')
+                 : (theme==='dark' ? '#6a6058' : '#9a8878');
+
+  let p = [];
+
+  // Fret lines — taper slightly: each line is 0.4px narrower per side per fret
+  for (let f=0; f<=FRETS; f++) {
+    const y    = T + f*FH;
+    const tap  = f * 0.3 * scale;
+    const x1   = L + tap;
+    const x2   = L + SW*(STRINGS-1) - tap;
+    if (f===0) continue; // replaced by nut or skipped
+    p.push(`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${fretCol}" stroke-width="${0.8*scale}"/>`);
+  }
+
+  // String lines — string 6 at index 0 (left=thickest), string 1 at index 5 (right=thinnest)
+  for (let i=0; i<STRINGS; i++) {
+    const sNum  = STRINGS - i;       // 6,5,4,3,2,1
+    const x     = L + i*SW;
+    // low E (6) = thickest (2.0), high e (1) = thinnest (0.55)
+    const thick = (0.55 + (sNum-1) * 0.29).toFixed(2);
+    const strCol = theme==='dark' ? '#3a3228' : '#9a8870';
+    p.push(`<line x1="${x}" y1="${T}" x2="${x}" y2="${T+FRETS*FH}" stroke="${strCol}" stroke-width="${thick}"/>`);
+  }
+
+  // Nut or fret number label
+  if (startFret===1) {
+    p.push(`<rect x="${L-1*scale}" y="${T-5*scale}" width="${SW*(STRINGS-1)+2*scale}" height="${5*scale}" rx="${1*scale}" fill="${nutCol}"/>`);
+  } else {
+    const tc = theme==='dark' ? '#554e44' : '#8a7858';
+    p.push(`<text x="${L-4*scale}" y="${T+FH*.65}" text-anchor="end" font-size="${7*scale}" fill="${tc}" font-family="Inconsolata,monospace">${startFret}fr</text>`);
+  }
+
+  // Barre
+  if (barre) {
+    const fr = barre.fret - startFret + 1;
+    const y  = T + (fr-.5)*FH;
+    const x1 = L + (STRINGS-barre.from)*SW;
+    const x2 = L + (STRINGS-barre.to)*SW;
+    const r  = FH*.3;
+    p.push(`<rect x="${Math.min(x1,x2)}" y="${y-r}" width="${Math.abs(x2-x1)}" height="${r*2}" rx="${r}" fill="${dotFillR}" opacity=".9"/>`);
+  }
+
+  // Finger dots
+  fingers.forEach(({s,f,d}) => {
+    const fr = f - startFret + 1;
+    if (fr<1 || fr>FRETS) return;
+    const x = L + (STRINGS-s)*SW;
+    const y = T + (fr-.5)*FH;
+    const r = FH*.3;
+    p.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="${dotFillR}"/>`);
+    if (d) p.push(`<text x="${x}" y="${y+2.4*scale}" text-anchor="middle" font-size="${5.5*scale}" fill="${dotText}" font-family="Inconsolata,monospace" font-weight="600">${d}</text>`);
+  });
+
+  // Open/muted markers
+  const MY = T - 11*scale;
+  for (let si=1; si<=STRINGS; si++) {
+    const x = L + (STRINGS-si)*SW;
+    if (open.includes(si)) {
+      p.push(`<circle cx="${x}" cy="${MY}" r="${3*scale}" fill="none" stroke="${markerCol}" stroke-width="${0.9*scale}"/>`);
+    } else if (muted.includes(si)) {
+      const d = 2.5*scale;
+      p.push(`<line x1="${x-d}" y1="${MY-d}" x2="${x+d}" y2="${MY+d}" stroke="${markerCol}" stroke-width="${1*scale}" stroke-linecap="round"/>`);
+      p.push(`<line x1="${x+d}" y1="${MY-d}" x2="${x-d}" y2="${MY+d}" stroke="${markerCol}" stroke-width="${1*scale}" stroke-linecap="round"/>`);
+    }
+  }
+
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${p.join('')}</svg>`;
+}
+
+
+// ═══════════════════════════════════════════════════
+//  CHORD DATA
+// ═══════════════════════════════════════════════════
+const DEFAULT_CHORDS = [
+  {name:'C',     type:'Major',        fingers:[{s:5,f:3,d:3},{s:4,f:2,d:2},{s:2,f:1,d:1}],                        open:[3,1],     muted:[6]},
+  {name:'D',     type:'Major',        fingers:[{s:3,f:2,d:1},{s:1,f:2,d:3},{s:2,f:3,d:2}],                        open:[4],       muted:[6,5]},
+  {name:'E',     type:'Major',        fingers:[{s:5,f:2,d:3},{s:4,f:2,d:2},{s:3,f:1,d:1}],                        open:[6,2,1]},
+  {name:'F',     type:'Major',        fingers:[{s:4,f:3,d:4},{s:3,f:2,d:3},{s:5,f:2,d:2}],                        barre:{fret:1,from:6,to:1},startFret:1},
+  {name:'G',     type:'Major',        fingers:[{s:6,f:3,d:2},{s:5,f:2,d:1},{s:1,f:3,d:4}],                        open:[4,3,2]},
+  {name:'A',     type:'Major',        fingers:[{s:4,f:2,d:1},{s:3,f:2,d:2},{s:2,f:2,d:3}],                        open:[5,1],     muted:[6]},
+  {name:'B',     type:'Major',        fingers:[{s:4,f:4,d:4},{s:3,f:4,d:3},{s:2,f:4,d:2}],                        barre:{fret:2,from:5,to:1},startFret:2,muted:[6]},
+  {name:'Cm',    type:'Minor',        fingers:[{s:5,f:4,d:4},{s:4,f:5,d:3},{s:3,f:5,d:2}],                        barre:{fret:3,from:6,to:1},startFret:3},
+  {name:'Dm',    type:'Minor',        fingers:[{s:3,f:2,d:2},{s:2,f:3,d:3},{s:1,f:1,d:1}],                        open:[4],       muted:[6,5]},
+  {name:'Em',    type:'Minor',        fingers:[{s:5,f:2,d:2},{s:4,f:2,d:3}],                                       open:[6,3,2,1]},
+  {name:'Fm',    type:'Minor',        fingers:[{s:5,f:3,d:4},{s:4,f:3,d:3}],                                       barre:{fret:1,from:6,to:1},startFret:1},
+  {name:'Gm',    type:'Minor',        fingers:[{s:5,f:5,d:4},{s:4,f:5,d:3}],                                       barre:{fret:3,from:6,to:1},startFret:3},
+  {name:'Am',    type:'Minor',        fingers:[{s:4,f:2,d:2},{s:3,f:2,d:3},{s:2,f:1,d:1}],                        open:[5,1],     muted:[6]},
+  {name:'Bm',    type:'Minor',        fingers:[{s:4,f:4,d:4},{s:3,f:4,d:3},{s:2,f:3,d:2}],                        barre:{fret:2,from:5,to:1},startFret:2,muted:[6]},
+  {name:'C7',    type:'Dominant 7th', fingers:[{s:5,f:3,d:3},{s:4,f:2,d:2},{s:2,f:1,d:1},{s:3,f:3,d:4}],          open:[1],       muted:[6]},
+  {name:'D7',    type:'Dominant 7th', fingers:[{s:3,f:2,d:2},{s:1,f:2,d:3},{s:2,f:1,d:1}],                        open:[4],       muted:[6,5]},
+  {name:'E7',    type:'Dominant 7th', fingers:[{s:5,f:2,d:2},{s:3,f:1,d:1}],                                       open:[6,4,2,1]},
+  {name:'G7',    type:'Dominant 7th', fingers:[{s:6,f:3,d:3},{s:5,f:2,d:2},{s:1,f:1,d:1}],                        open:[4,3,2]},
+  {name:'A7',    type:'Dominant 7th', fingers:[{s:4,f:2,d:2},{s:2,f:2,d:3}],                                       open:[5,3,1],   muted:[6]},
+  {name:'B7',    type:'Dominant 7th', fingers:[{s:5,f:2,d:1},{s:3,f:2,d:2},{s:4,f:1,d:3},{s:2,f:2,d:4}],          open:[1],       muted:[6]},
+  {name:'Cmaj7', type:'Major 7th',    fingers:[{s:5,f:3,d:3},{s:4,f:2,d:2},{s:2,f:1,d:1}],                        open:[3,2,1],   muted:[6]},
+  {name:'Dmaj7', type:'Major 7th',    fingers:[{s:3,f:2,d:1},{s:2,f:2,d:2},{s:1,f:2,d:3}],                        open:[4],       muted:[6,5]},
+  {name:'Emaj7', type:'Major 7th',    fingers:[{s:4,f:2,d:1},{s:3,f:1,d:2}],                                       open:[6,5,2,1]},
+  {name:'Fmaj7', type:'Major 7th',    fingers:[{s:4,f:3,d:4},{s:3,f:2,d:3},{s:5,f:2,d:2},{s:2,f:1,d:1}],          open:[1],       muted:[6]},
+  {name:'Gmaj7', type:'Major 7th',    fingers:[{s:6,f:3,d:2},{s:5,f:2,d:1},{s:1,f:2,d:3}],                        open:[4,3,2]},
+  {name:'Amaj7', type:'Major 7th',    fingers:[{s:4,f:2,d:1},{s:3,f:2,d:2},{s:2,f:2,d:3},{s:1,f:2,d:4}],          open:[5],       muted:[6]},
+  {name:'Dm7',   type:'Minor 7th',    fingers:[{s:3,f:2,d:2},{s:2,f:1,d:1}],                                       open:[4,1],     muted:[6,5]},
+  {name:'Em7',   type:'Minor 7th',    fingers:[{s:5,f:2,d:2}],                                                      open:[6,4,3,2,1]},
+  {name:'Am7',   type:'Minor 7th',    fingers:[{s:4,f:2,d:2},{s:2,f:1,d:1}],                                       open:[5,3,1],   muted:[6]},
+  {name:'Bm7',   type:'Minor 7th',    fingers:[{s:4,f:4,d:4},{s:3,f:3,d:3},{s:2,f:3,d:2}],                        barre:{fret:2,from:5,to:1},startFret:2,muted:[6]},
+  {name:'Cadd9', type:'Add 9',        fingers:[{s:5,f:3,d:3},{s:4,f:2,d:2},{s:2,f:3,d:4}],                        open:[3,1],     muted:[6]},
+  {name:'Dadd9', type:'Add 9',        fingers:[{s:3,f:2,d:1},{s:1,f:3,d:3}],                                       open:[4,2],     muted:[6,5]},
+  {name:'Gadd9', type:'Add 9',        fingers:[{s:6,f:3,d:2},{s:5,f:2,d:1},{s:2,f:3,d:3},{s:1,f:3,d:4}],          open:[4,3]},
+  {name:'Aadd9', type:'Add 9',        fingers:[{s:4,f:2,d:1},{s:3,f:2,d:2},{s:2,f:2,d:3}],                        open:[5,1],     muted:[6]},
+  {name:'Csus2', type:'Suspended 2',  fingers:[{s:5,f:3,d:3},{s:4,f:2,d:2}],                                       open:[3,2,1],   muted:[6]},
+  {name:'Dsus2', type:'Suspended 2',  fingers:[{s:3,f:2,d:1},{s:1,f:3,d:2}],                                       open:[4,2],     muted:[6,5]},
+  {name:'Asus2', type:'Suspended 2',  fingers:[{s:4,f:2,d:1},{s:3,f:2,d:2}],                                       open:[5,2,1],   muted:[6]},
+  {name:'Csus4', type:'Suspended 4',  fingers:[{s:5,f:3,d:3},{s:4,f:2,d:2},{s:3,f:1,d:1},{s:2,f:1,d:4}],          open:[1],       muted:[6]},
+  {name:'Dsus4', type:'Suspended 4',  fingers:[{s:3,f:2,d:1},{s:2,f:3,d:2},{s:1,f:3,d:3}],                        open:[4],       muted:[6,5]},
+  {name:'Gsus4', type:'Suspended 4',  fingers:[{s:6,f:3,d:1},{s:5,f:3,d:2},{s:1,f:3,d:4}],                        open:[4,3,2]},
+  {name:'Asus4', type:'Suspended 4',  fingers:[{s:4,f:2,d:1},{s:3,f:2,d:2},{s:2,f:3,d:3}],                        open:[5,1],     muted:[6]},
+  {name:'Cdim',  type:'Diminished',   fingers:[{s:5,f:3,d:3},{s:4,f:2,d:2},{s:3,f:1,d:1},{s:2,f:2,d:4}],          muted:[6,1]},
+  {name:'Ddim',  type:'Diminished',   fingers:[{s:4,f:4,d:4},{s:3,f:3,d:3},{s:2,f:2,d:2},{s:1,f:1,d:1}],          startFret:1,    muted:[6,5]},
+  {name:'Bdim',  type:'Diminished',   fingers:[{s:5,f:2,d:1},{s:4,f:3,d:2},{s:3,f:2,d:3},{s:2,f:3,d:4}],          muted:[6,1]},
+  {name:'Caug',  type:'Augmented',    fingers:[{s:5,f:3,d:3},{s:4,f:2,d:2},{s:3,f:2,d:1},{s:2,f:1,d:4}],          muted:[6,1]},
+  {name:'Daug',  type:'Augmented',    fingers:[{s:3,f:2,d:1},{s:2,f:3,d:2},{s:1,f:3,d:3}],                        open:[4],       muted:[6,5]},
+  {name:'Eaug',  type:'Augmented',    fingers:[{s:5,f:2,d:2},{s:4,f:2,d:3},{s:3,f:1,d:1},{s:2,f:1,d:4}],          open:[6]},
+  {name:'F#m',   type:'Minor',        fingers:[{s:5,f:4,d:4},{s:4,f:4,d:3},{s:3,f:3,d:2}],                        barre:{fret:2,from:6,to:1},startFret:2},
+  {name:'C#m',   type:'Minor',        fingers:[{s:5,f:6,d:4},{s:4,f:6,d:3},{s:3,f:5,d:2}],                        barre:{fret:4,from:6,to:1},startFret:4},
+  {name:'G#m',   type:'Minor',        fingers:[{s:5,f:6,d:4},{s:4,f:6,d:3},{s:3,f:5,d:2}],                        barre:{fret:4,from:6,to:1},startFret:4},
+  {name:'Bb',    type:'Major',        fingers:[{s:5,f:3,d:4},{s:4,f:3,d:3},{s:3,f:3,d:2}],                        barre:{fret:1,from:5,to:1},startFret:1,muted:[6]},
+  {name:'Eb',    type:'Major',        fingers:[{s:5,f:6,d:4},{s:4,f:5,d:3},{s:3,f:5,d:2}],                        barre:{fret:3,from:6,to:1},startFret:3},
+  {name:'Ab',    type:'Major',        fingers:[{s:5,f:6,d:4},{s:4,f:6,d:3},{s:3,f:6,d:2}],                        barre:{fret:4,from:6,to:1},startFret:4},
+  {name:'F#',    type:'Major',        fingers:[{s:5,f:4,d:4},{s:4,f:4,d:3},{s:3,f:4,d:2}],                        barre:{fret:2,from:6,to:1},startFret:2},
+  {name:'C#',    type:'Major',        fingers:[{s:5,f:6,d:4},{s:4,f:6,d:3},{s:3,f:6,d:2}],                        barre:{fret:4,from:6,to:1},startFret:4},
+  {name:'Bbm',   type:'Minor',        fingers:[{s:5,f:3,d:4},{s:4,f:3,d:3},{s:3,f:2,d:2}],                        barre:{fret:1,from:6,to:1},startFret:1},
+  {name:'Ebm',   type:'Minor',        fingers:[{s:5,f:6,d:4},{s:4,f:6,d:3},{s:3,f:5,d:2}],                        barre:{fret:4,from:6,to:1},startFret:4},
+];
+
+// ═══════════════════════════════════════════════════
+//  PERSISTENCE — Firebase Firestore
+// ═══════════════════════════════════════════════════
+const SK = { theme:'cj-theme' };
+
+let statusState  = {};
+let customChords = [];
+let diagEdits    = {};
+let customOrder  = {};
+let currentUser  = null;
+let saveDebounce = null;
+
+function setSyncStatus(state, label) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  dot.className = 'sync-dot ' + state;
+  lbl.textContent = label;
+}
+
+// ── Firestore helpers ──
+function userDoc() {
+  return window.firestore
+    ? window.firestore.doc(window.db, 'users', currentUser.uid)
+    : null;
+}
+
+async function loadFromFirestore() {
+  if (!currentUser) return;
+  setSyncStatus('syncing', 'Loading…');
+  try {
+    const snap = await window.firestore.getDoc(userDoc());
+    if (snap.exists()) {
+      const d = snap.data();
+      statusState  = d.statusState  || {};
+      customChords = d.customChords || [];
+      diagEdits    = d.diagEdits    || {};
+      customOrder  = d.customOrder  || {};
+    }
+    setSyncStatus('synced', 'Synced');
+    render();
+  } catch(e) {
+    console.error(e);
+    setSyncStatus('error', 'Sync error');
+  }
+}
+
+async function saveToFirestore() {
+  if (!currentUser) return;
+  setSyncStatus('syncing', 'Saving…');
+  try {
+    await window.firestore.setDoc(userDoc(), { statusState, customChords, diagEdits, customOrder });
+    setSyncStatus('synced', 'Saved ✓');
+  } catch(e) {
+    console.error(e);
+    setSyncStatus('error', 'Save failed');
+  }
+}
+
+function saveAll() {
+  // debounce writes — wait 800ms after last change
+  clearTimeout(saveDebounce);
+  saveDebounce = setTimeout(saveToFirestore, 800);
+}
+
+function getAllChords() {
+  const defaults = DEFAULT_CHORDS.map(c => diagEdits[c.name] ? {...c, ...diagEdits[c.name]} : c);
+  return [...defaults, ...customChords];
+}
+function getStatus(name) { return statusState[name] || 'unset'; }
+function setStatus(name, status) {
+  if (status==='unset') delete statusState[name];
+  else statusState[name] = status;
+  saveAll(); render();
+  toast(status==='unset' ? `${name} cleared` : `${name} → ${status}`);
+}
+
+// ═══════════════════════════════════════════════════
+//  THEME  (still localStorage — not user data)
+// ═══════════════════════════════════════════════════
+function applyTheme(t, save=true) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('theme-label').textContent = t==='dark' ? 'Dark' : 'Light';
+  document.getElementById('theme-icon').textContent  = t==='dark' ? '🌙' : '☀️';
+  if (save) localStorage.setItem(SK.theme, t);
+}
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  applyTheme(cur==='dark' ? 'light' : 'dark');
+  render();
+});
+
+// ═══════════════════════════════════════════════════
+//  UI STATE
+// ═══════════════════════════════════════════════════
+let activeFilter = 'all';
+let searchQuery  = '';
+let ctxTarget    = null;
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function getFiltered() {
+  const all = getAllChords();
+  if (!searchQuery) return all;
+  const q = searchQuery.toLowerCase();
+  return all.filter(c => c.name.toLowerCase().includes(q) || c.type.toLowerCase().includes(q));
+}
+
+// Apply saved order to a list of chords for a given section
+function applyOrder(list, section) {
+  const order = customOrder[section];
+  if (!order || !order.length) return list;
+  const map = new Map(list.map(c=>[c.name,c]));
+  const ordered = order.filter(n=>map.has(n)).map(n=>map.get(n));
+  const rest = list.filter(c=>!order.includes(c.name));
+  return [...ordered, ...rest];
+}
+
+// ═══════════════════════════════════════════════════
+//  CARD BUILDER
+// ═══════════════════════════════════════════════════
+function makeCard(chord) {
+  const status = getStatus(chord.name);
+  const sc = status !== 'unset' ? status : '';
+  const isCustom = customChords.some(c=>c.name===chord.name);
+
+  const div = document.createElement('div');
+  div.className = `chord-card${sc?' '+sc:''}${isCustom?' custom-chord':''}`;
+  div.dataset.chord = chord.name;
+  div.draggable = true;
+
+  div.innerHTML = `
+    <button class="btn-edit"   title="Edit diagram">✎</button>
+    <div class="chord-name">${chord.name}</div>
+    <div class="chord-type">${chord.type}</div>
+    <div class="chord-diagram">${buildSVG(chord, sc, 1)}</div>
+    <div class="chord-status-dot"></div>
+  `;
+
+  div.querySelector('.btn-edit').addEventListener('click', e => { e.stopPropagation(); openEditor(chord, isCustom); });
+
+  div.addEventListener('contextmenu', e => { e.preventDefault(); openCtx(e, chord.name); });
+
+  let pt = null;
+  div.addEventListener('touchstart', e => {
+    pt = setTimeout(() => {
+      const t = e.touches[0];
+      openCtx({clientX:t.clientX,clientY:t.clientY}, chord.name);
+    }, 500);
+  }, {passive:true});
+  div.addEventListener('touchend',  ()=>clearTimeout(pt));
+  div.addEventListener('touchmove', ()=>clearTimeout(pt));
+
+  // Single click = expand, double click = cycle category
+  let clickTimer = null;
+  div.addEventListener('click', e => {
+    if (clickTimer) {
+      clearTimeout(clickTimer);
+      clickTimer = null;
+      // double click — cycle category
+      const cycle = ['unset','mastered','learning','future'];
+      setStatus(chord.name, cycle[(cycle.indexOf(getStatus(chord.name))+1)%cycle.length]);
+    } else {
+      clickTimer = setTimeout(() => {
+        clickTimer = null;
+        openExpand(chord);
+      }, 220);
+    }
+  });
+
+  // ── Drag-and-drop ──
+  div.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/plain', chord.name);
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(()=>div.classList.add('dragging'), 0);
+  });
+  div.addEventListener('dragend', () => div.classList.remove('dragging'));
+
+  div.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.chord-card.drag-over').forEach(el=>el.classList.remove('drag-over'));
+    div.classList.add('drag-over');
+  });
+  div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+
+  div.addEventListener('drop', e => {
+    e.preventDefault();
+    div.classList.remove('drag-over');
+    const draggedName = e.dataTransfer.getData('text/plain');
+    const targetName  = chord.name;
+    if (draggedName === targetName) return;
+
+    // Find which section/grid this card lives in
+    const grid = div.closest('.chord-grid');
+    if (!grid) return;
+    const section = grid.id.replace('grid-','');
+
+    // Read current visible order from DOM
+    const cards = [...grid.querySelectorAll('.chord-card')];
+    const names = cards.map(c=>c.dataset.chord);
+
+    const fromIdx = names.indexOf(draggedName);
+    const toIdx   = names.indexOf(targetName);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    names.splice(fromIdx, 1);
+    names.splice(toIdx, 0, draggedName);
+
+    customOrder[section] = names;
+    saveAll();
+    render();
+  });
+
+  return div;
+}
+
+// ═══════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════
+function render() {
+  const filtered = getFiltered();
+  const groups = {mastered:[],learning:[],future:[],unset:[]};
+  filtered.forEach(c => groups[getStatus(c.name)].push(c));
+
+  ['mastered','learning','future','unset'].forEach(sec => {
+    const grid    = document.getElementById(`grid-${sec}`);
+    const section = document.getElementById(`sec-${sec}`);
+    const lbl     = document.getElementById(`lbl-${sec}`);
+    const list    = applyOrder(groups[sec], sec);
+    const show    = activeFilter==='all' || activeFilter===sec;
+
+    section.style.display = show ? '' : 'none';
+    if (!show) return;
+
+    lbl.textContent = `${list.length} chord${list.length!==1?'s':''}`;
+    grid.innerHTML = '';
+
+    if (list.length===0) {
+      const e = document.createElement('div');
+      e.className='empty';
+      e.textContent = sec==='unset' ? 'All chords categorised!' : 'None yet.';
+      grid.appendChild(e);
+    } else {
+      list.forEach(c => grid.appendChild(makeCard(c)));
+    }
+  });
+
+  // Stats
+  const all = getAllChords();
+  const counts = {mastered:0,learning:0,future:0};
+  all.forEach(c => { const s=getStatus(c.name); if(counts[s]!==undefined) counts[s]++; });
+  document.getElementById('cnt-mastered').textContent = counts.mastered;
+  document.getElementById('cnt-learning').textContent = counts.learning;
+  document.getElementById('cnt-future').textContent   = counts.future;
+  const T = all.length;
+  ['mastered','learning','future'].forEach(s =>
+    document.getElementById(`prog-${s}`).style.width = (counts[s]/T*100)+'%'
+  );
+}
+
+// ═══════════════════════════════════════════════════
+//  CONTEXT MENU
+// ═══════════════════════════════════════════════════
+const ctxMenu = document.getElementById('ctx-menu');
+
+function openCtx(e, name) {
+  ctxTarget = name;
+  ctxMenu.classList.add('show');
+  let x = e.clientX + window.scrollX;
+  let y = e.clientY + window.scrollY;
+  requestAnimationFrame(() => {
+    if (x+ctxMenu.offsetWidth  > window.innerWidth +window.scrollX-8) x -= ctxMenu.offsetWidth;
+    if (y+ctxMenu.offsetHeight > window.innerHeight+window.scrollY-8) y -= ctxMenu.offsetHeight;
+    ctxMenu.style.left = x+'px'; ctxMenu.style.top = y+'px';
+  });
+}
+function closeCtx() { ctxMenu.classList.remove('show'); }
+
+ctxMenu.querySelectorAll('.ctx-item').forEach(item => {
+  item.addEventListener('click', e => {
+    e.stopPropagation();
+    if (ctxTarget) setStatus(ctxTarget, item.dataset.status);
+    closeCtx();
+  });
+});
+document.addEventListener('click', e => { if (!ctxMenu.contains(e.target)) closeCtx(); });
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') { closeCtx(); closeExpand(); closeEditor(); }
+});
+
+// ═══════════════════════════════════════════════════
+//  EXPAND MODAL
+// ═══════════════════════════════════════════════════
+function openExpand(chord) {
+  const sc = getStatus(chord.name);
+  document.getElementById('exp-name').textContent    = chord.name;
+  document.getElementById('exp-type').textContent    = chord.type;
+  document.getElementById('exp-diagram').innerHTML   = buildSVG(chord, sc!=='unset'?sc:'', 2.2);
+  document.getElementById('expand-overlay').classList.remove('hidden');
+}
+function closeExpand() { document.getElementById('expand-overlay').classList.add('hidden'); }
+document.getElementById('exp-close').addEventListener('click', closeExpand);
+document.getElementById('expand-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('expand-overlay')) closeExpand();
+});
+
+// ═══════════════════════════════════════════════════
+//  EDITOR MODAL — with live preview
+// ═══════════════════════════════════════════════════
+let edChord   = null;
+let edIsNew   = false;
+let edStrings = Array(6).fill(null).map(()=>({state:'open',fret:1,finger:0}));
+
+function openEditor(chord, isCustom) {
+  edChord  = chord;
+  edIsNew  = false;
+  document.getElementById('ed-modal-title').textContent = `Edit — ${chord.name}`;
+  document.getElementById('ed-meta').classList.add('hidden');
+  document.getElementById('ed-delete').classList.toggle('hidden', !isCustom);
+  loadEditorState(chord);
+  document.getElementById('editor-overlay').classList.remove('hidden');
+}
+function openNewEditor() {
+  edChord  = null;
+  edIsNew  = true;
+  document.getElementById('ed-modal-title').textContent = 'New Chord';
+  document.getElementById('ed-meta').classList.remove('hidden');
+  document.getElementById('ed-name').value = '';
+  document.getElementById('ed-type').value = '';
+  document.getElementById('ed-delete').classList.add('hidden');
+  loadEditorState({name:'',type:'',fingers:[],open:[1,2,3,4,5,6],muted:[],startFret:1});
+  document.getElementById('editor-overlay').classList.remove('hidden');
+}
+function closeEditor() { document.getElementById('editor-overlay').classList.add('hidden'); }
+
+function loadEditorState(chord) {
+  document.getElementById('ed-startFret').value = chord.startFret || 1;
+  document.getElementById('ed-numFrets').value  = chord.numFrets  || 4;
+
+  for (let i=0; i<6; i++) {
+    const sNum   = 6-i;
+    const isOpen = (chord.open ||[]).includes(sNum);
+    const isMute = (chord.muted||[]).includes(sNum);
+    const finger = (chord.fingers||[]).find(f=>f.s===sNum);
+    if (isOpen)        edStrings[i] = {state:'open',  fret:1,         finger:0};
+    else if (isMute)   edStrings[i] = {state:'muted', fret:1,         finger:0};
+    else if (finger)   edStrings[i] = {state:'fret',  fret:finger.f,  finger:finger.d||0};
+    else               edStrings[i] = {state:'open',  fret:1,         finger:0};
+  }
+
+  if (chord.barre) {
+    document.getElementById('ed-barre-on').checked = true;
+    document.getElementById('ed-barre-fields').classList.remove('hidden');
+    document.getElementById('ed-bf').value    = chord.barre.fret;
+    document.getElementById('ed-bfrom').value = chord.barre.from;
+    document.getElementById('ed-bto').value   = chord.barre.to;
+  } else {
+    document.getElementById('ed-barre-on').checked = false;
+    document.getElementById('ed-barre-fields').classList.add('hidden');
+  }
+
+  buildStringRows();
+  refreshPreview();
+}
+
+function buildStringRows() {
+  const tbody     = document.getElementById('ed-string-rows');
+  tbody.innerHTML = '';
+  const startFret = parseInt(document.getElementById('ed-startFret').value)||1;
+  const numFrets  = parseInt(document.getElementById('ed-numFrets').value)||4;
+
+  for (let i=0; i<6; i++) {
+    const sNum = 6-i;
+    const es   = edStrings[i];
+    const tr   = document.createElement('tr');
+
+    // state select options
+    let stateOpts = `<option value="open">○ Open</option><option value="muted">✕ Muted</option>`;
+    for (let fn=startFret; fn<startFret+numFrets; fn++) {
+      stateOpts += `<option value="${fn}">Fret ${fn}</option>`;
+    }
+
+    // finger select
+    let finOpts = `<option value="0">—</option>`;
+    for (let fn=1;fn<=4;fn++) finOpts += `<option value="${fn}">${fn}</option>`;
+
+    tr.innerHTML = `
+      <td><span class="str-label">${sNum}</span></td>
+      <td><select class="s-state">${stateOpts}</select></td>
+      <td><select class="s-finger">${finOpts}</select></td>
+    `;
+
+    const sSel = tr.querySelector('.s-state');
+    const fSel = tr.querySelector('.s-finger');
+
+    // restore
+    sSel.value = es.state==='open'?'open': es.state==='muted'?'muted': String(es.fret);
+    fSel.value = String(es.finger||0);
+    fSel.disabled = es.state!=='fret';
+    fSel.style.opacity = es.state==='fret' ? '1' : '.35';
+
+    sSel.addEventListener('change', () => {
+      const v = sSel.value;
+      if (v==='open')  { edStrings[i]={state:'open', fret:1,finger:0}; fSel.disabled=true;  fSel.style.opacity='.35'; }
+      else if(v==='muted'){ edStrings[i]={state:'muted',fret:1,finger:0}; fSel.disabled=true; fSel.style.opacity='.35'; }
+      else               { edStrings[i]={state:'fret',fret:parseInt(v),finger:parseInt(fSel.value)||0}; fSel.disabled=false; fSel.style.opacity='1'; }
+      refreshPreview();
+    });
+    fSel.addEventListener('change', () => {
+      edStrings[i].finger = parseInt(fSel.value)||0;
+      refreshPreview();
+    });
+
+    tbody.appendChild(tr);
+  }
+}
+
+function editorToChord(name, type) {
+  const startFret = parseInt(document.getElementById('ed-startFret').value)||1;
+  const numFrets  = parseInt(document.getElementById('ed-numFrets').value)||4;
+  const open=[],muted=[],fingers=[];
+
+  for (let i=0;i<6;i++) {
+    const sNum=6-i, es=edStrings[i];
+    if      (es.state==='open')  open.push(sNum);
+    else if (es.state==='muted') muted.push(sNum);
+    else fingers.push({s:sNum,f:es.fret,d:es.finger||0});
+  }
+
+  const chord = {name,type,fingers,open,muted,startFret,numFrets};
+  if (document.getElementById('ed-barre-on').checked) {
+    chord.barre = {
+      fret: parseInt(document.getElementById('ed-bf').value)||startFret,
+      from: parseInt(document.getElementById('ed-bfrom').value)||6,
+      to:   parseInt(document.getElementById('ed-bto').value)||1,
+    };
+  }
+  return chord;
+}
+
+function refreshPreview() {
+  const name = edChord?.name||'?';
+  const type = edChord?.type||'';
+  const chord = editorToChord(name,type);
+  const wrap  = document.getElementById('ed-preview');
+  wrap.innerHTML = buildSVG(chord, '', 1.55);
+}
+
+// wire up all editor inputs to refresh preview
+['ed-startFret','ed-numFrets','ed-bf','ed-bfrom','ed-bto'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input',  () => { if(id==='ed-startFret'||id==='ed-numFrets') buildStringRows(); refreshPreview(); });
+  el.addEventListener('change', () => { if(id==='ed-startFret'||id==='ed-numFrets') buildStringRows(); refreshPreview(); });
+});
+document.getElementById('ed-barre-on').addEventListener('change', function(){
+  document.getElementById('ed-barre-fields').classList.toggle('hidden',!this.checked);
+  refreshPreview();
+});
+
+document.getElementById('ed-close').addEventListener('click', closeEditor);
+document.getElementById('ed-cancel').addEventListener('click', closeEditor);
+document.getElementById('editor-overlay').addEventListener('click', e => {
+  if (e.target===document.getElementById('editor-overlay')) closeEditor();
+});
+
+document.getElementById('ed-save').addEventListener('click', () => {
+  if (edIsNew) {
+    const name=(document.getElementById('ed-name').value||'').trim();
+    const type=(document.getElementById('ed-type').value||'').trim()||'Custom';
+    if (!name) { toast('Please enter a chord name'); return; }
+    if (getAllChords().some(c=>c.name===name)) { toast(`"${name}" already exists`); return; }
+    customChords.push(editorToChord(name,type));
+    saveAll(); render(); toast(`${name} added`);
+  } else {
+    const name=edChord.name, type=edChord.type;
+    const updated=editorToChord(name,type);
+    const ci=customChords.findIndex(c=>c.name===name);
+    if (ci>=0) customChords[ci]=updated;
+    else       diagEdits[name]=updated;
+    saveAll(); render(); toast(`${name} updated`);
+  }
+  closeEditor();
+});
+
+document.getElementById('ed-delete').addEventListener('click', () => {
+  if (!edChord) return;
+  if (!confirm(`Delete "${edChord.name}"?`)) return;
+  customChords = customChords.filter(c=>c.name!==edChord.name);
+  delete statusState[edChord.name];
+  saveAll(); render(); toast(`${edChord.name} deleted`);
+  closeEditor();
+});
+
+// ═══════════════════════════════════════════════════
+//  CONTROLS
+// ═══════════════════════════════════════════════════
+document.getElementById('btn-add').addEventListener('click', openNewEditor);
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    render();
+  });
+});
+
+document.getElementById('search').addEventListener('input', e => {
+  searchQuery = e.target.value.trim();
+  render();
+});
+
+// ═══════════════════════════════════════════════════
+//  INIT — Firebase Auth
+// ═══════════════════════════════════════════════════
+// Apply saved theme immediately (before auth loads)
+const savedTheme = localStorage.getItem(SK.theme);
+if (savedTheme) applyTheme(savedTheme, false);
+
+// Auth state observer — central entry point
+window.onFirebaseReady = function() {
+  const auth     = window.auth;
+  const provider = new window.GoogleAuthProvider();
+
+  window.firestore.onSnapshot
+    ? null : null; // Firestore already loaded
+
+  // Sign-in button
+  document.getElementById('btn-google-signin').addEventListener('click', () => {
+    window.signInWithPopup(auth, provider).catch(e => {
+      console.error(e);
+      toast('Sign-in failed — try again');
+    });
+  });
+
+  // Sign-out button
+  document.getElementById('btn-signout').addEventListener('click', () => {
+    window.signOut(auth).then(() => {
+      statusState = {}; customChords = []; diagEdits = {}; customOrder = {};
+      render();
+    });
+  });
+
+  // Auth state changes
+  window.onAuthStateChanged(auth, async user => {
+    currentUser = user;
+    const authScreen = document.getElementById('auth-screen');
+    const userChip   = document.getElementById('user-chip');
+
+    if (user) {
+      // Hide login screen, show app
+      authScreen.classList.add('hidden');
+      userChip.style.display = 'flex';
+      document.getElementById('user-avatar').src = user.photoURL || '';
+      document.getElementById('user-name').textContent = user.displayName || user.email;
+      await loadFromFirestore();
+    } else {
+      // Show login screen
+      authScreen.classList.remove('hidden');
+      userChip.style.display = 'none';
+      setSyncStatus('', 'Not signed in');
+      render(); // render empty state
+    }
+  });
+};
+
+</script>
+
+<!-- Firebase SDKs (loaded as modules, then bridged to window for the main script) -->
+<script type="module">
+  import { initializeApp }        from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+                                   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  import { getFirestore, doc, getDoc, setDoc }
+                                   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyB8K4XPW9kedMdbUqL_Dftoz4lpwJQCAXc",
+    authDomain:        "chord-journal.firebaseapp.com",
+    projectId:         "chord-journal",
+    storageBucket:     "chord-journal.firebasestorage.app",
+    messagingSenderId: "112678065373",
+    appId:             "1:112678065373:web:ecde6292aa55414d97f734"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // Bridge to window so the classic script above can access them
+  window.auth               = auth;
+  window.db                 = db;
+  window.GoogleAuthProvider = GoogleAuthProvider;
+  window.signInWithPopup    = signInWithPopup;
+  window.signOut            = signOut;
+  window.onAuthStateChanged = onAuthStateChanged;
+  window.firestore          = { doc, getDoc, setDoc };
+
+  window.onFirebaseReady();
+</script>
+</body>
+</html>
